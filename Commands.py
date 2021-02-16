@@ -1,4 +1,5 @@
 from NPC import Animal
+import sys
 
 
 class CommandHandler:
@@ -12,7 +13,8 @@ class CommandHandler:
             'close': self.close,
             'error': lambda x: self.notify(f'{x} is not a valid command'),
             'feed': self.feed,
-            'get': self.get
+            'get': self.get,
+            'check': self.check
         }
 
     def notify(self, message):
@@ -32,27 +34,46 @@ class CommandHandler:
                 (x - 1, y), (x + 1, y),
                 (x - 1, y + 1), (x, y + 1), (x + 1, y + 1)}
 
+    def check(self, *objs):
+        if 'inventory' in objs or not objs:
+            for item, count in self.player.inventory.items():
+                self.notify(f'{count} {item}')
+        elif 'warehouse' in objs:
+            pass
+        else:
+            for obj in objs:
+                self.check_item(obj)
+
+    def check_item(self, obj):
+        self.notify(f'{self.player.inventory.get(obj, 0)} {obj}')
+
     def feed(self):
         # find animals
         nearby_animals = [animal for animal in self.zoo.npcs if
                           isinstance(animal, Animal) and animal.pos in self.neighbours(self.zoo.playerPos)]
         # feed animals
         for animal in nearby_animals:
-            if self.player.food > 0:
+            if self.player.inventory['food'] > 0:
                 animal.feed()
                 self.notify(f'feeding {animal.name} the {animal.species}')
-                self.player.food -= 1
+                self.player.inventory['food'] -= 1
             else:
                 self.notify('out of food')
                 break
         if not nearby_animals:
             self.notify('no animals nearby to feed')
 
-    def get(self, obj):
+    def get(self, amount, obj=''):
+        try:
+            amount = int(amount)
+        except ValueError:
+            # only one input given, switch around parameters
+            obj = amount
+            amount = 1
         if self.zoo.in_warehouse():
             if obj == 'food':
-                self.player.food += 10
-                self.notify('getting 10 food')
+                self.player.inventory['food'] += amount
+                self.notify(f'getting {amount} food')
             else:
                 self.notify(f'cannot get {obj}')
         else:
@@ -103,7 +124,12 @@ class CommandHandler:
             self.notify('no gates nearby')
 
     def interpret(self, command, *args):
-        self.lookup.get(command, lambda *x: None)(*args)
+        try:
+            self.lookup.get(command, lambda *x: None)(*args)
+        except TypeError:
+            _, exc, _ = sys.exc_info()
+            error_string = exc.args[0]
+            self.notify(f'bad argument: {error_string}')
 
     def execute(self, command_string):
         command, args = self.parse(command_string)

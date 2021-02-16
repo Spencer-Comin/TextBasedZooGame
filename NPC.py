@@ -47,7 +47,7 @@ class Animal(NPC):
     name = ''
     timeToGrowUp = 100 * FPS
     hunger = 0
-    maxHunger = 100 * FPS
+    maxHunger = 150 * FPS
     maxAge = 500 * FPS
     baby = True
 

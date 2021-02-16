@@ -1,7 +1,7 @@
 class Player:
     events = []
     char = '@'
-    food = 10
+    inventory = {'food': 10}
 
     def update(self):
         while self.events:
