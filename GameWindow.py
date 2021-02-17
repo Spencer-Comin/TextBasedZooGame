@@ -1,7 +1,7 @@
 import wx
 from Printer import Printer
 from InputHandler import InputHandler
-from Constants import FPS
+from Utilities import FPS
 
 
 class GameFrame(wx.Frame):

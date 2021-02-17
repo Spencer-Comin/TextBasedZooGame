@@ -1,4 +1,6 @@
 from NPC import Animal
+from Utilities import neighbours
+
 import sys
 
 
@@ -14,7 +16,8 @@ class CommandHandler:
             'error': lambda x: self.notify(f'{x} is not a valid command'),
             'feed': self.feed,
             'get': self.get,
-            'check': self.check
+            'check': self.check,
+            'help': self.help
         }
 
     def notify(self, message):
@@ -27,12 +30,9 @@ class CommandHandler:
         else:
             return 'error', [tokens[0]]
 
-    @staticmethod
-    def neighbours(pos):
-        x, y = pos
-        return {(x - 1, y - 1), (x, y - 1), (x + 1, y - 1),
-                (x - 1, y), (x + 1, y),
-                (x - 1, y + 1), (x, y + 1), (x + 1, y + 1)}
+    def help(self):
+        for key in self.lookup:
+            self.notify(key)
 
     def check(self, *objs):
         if 'inventory' in objs or not objs:
@@ -50,7 +50,7 @@ class CommandHandler:
     def feed(self):
         # find animals
         nearby_animals = [animal for animal in self.zoo.npcs if
-                          isinstance(animal, Animal) and animal.pos in self.neighbours(self.zoo.playerPos)]
+                          isinstance(animal, Animal) and animal.pos in neighbours(self.zoo.playerPos, dist=4)]
         # feed animals
         for animal in nearby_animals:
             if self.player.inventory['food'] > 0:
@@ -87,7 +87,7 @@ class CommandHandler:
 
     def open_gate(self):
         zoo = self.zoo
-        available_gate = self.neighbours(zoo.playerPos) & zoo.gates
+        available_gate = neighbours(zoo.playerPos) & zoo.gates
         if available_gate:
             gate = available_gate.pop()
             if gate in zoo.openGates:
@@ -108,7 +108,7 @@ class CommandHandler:
 
     def close_gate(self):
         zoo = self.zoo
-        available_gate = (self.neighbours(zoo.playerPos) | {zoo.playerPos}) & zoo.gates
+        available_gate = (neighbours(zoo.playerPos) | {zoo.playerPos}) & zoo.gates
         if available_gate:
             gate = available_gate.pop()
             if gate not in zoo.openGates:

@@ -1,4 +1,21 @@
+import random
+
+
 FPS = 5
+
+
+def neighbours(pos, dist=1):
+    x, y = pos
+    if dist == 1:
+        return {(x - 1, y - 1), (x, y - 1), (x + 1, y - 1),
+                (x - 1, y), (x + 1, y),
+                (x - 1, y + 1), (x, y + 1), (x + 1, y + 1)}
+    built = set()
+    # obviously this is the absolute worst way to do this, but generally dist < 5
+    for x in neighbours(pos, dist=dist-1):
+        built |= neighbours(x)
+    return built - {pos}
+
 
 names = ['Abella', 'Anaïs', 'Astoria', 'Azura', 'Berlin', 'Blanca', 'Blue', 'Callista', 'Devina', 'Dove',
          'Eugenia', 'Fern', 'Fleur', 'Jessalyn', 'Juna', 'Kani', 'Keva', 'Lake', 'Lavender', 'Lira', 'Lotte',
@@ -30,3 +47,27 @@ animalNames = ['Boo-boo', 'Abby', 'Houdini', 'Dreamer', 'Amos', 'Maggie-mae', 'T
                'Tinkerbell', 'Monkey', 'Eddie', 'Fresier', 'Dusty', 'Snuffles', 'Indy', 'Dee Dee', 'Dolly', 'Mary Jane',
                'Sweet-pea', 'Starr', 'Sasha', 'Dee', 'Pixie', 'Garfield', 'Tipr', 'Reggie', 'Wrigley', 'Bizzy', 'KC',
                'Meggie', 'Presley', 'Piglet', 'Emily', 'May', 'Lizzy', 'Baxter', 'Ivy']
+
+names_in_use = set()
+
+
+def get_name(animal=False):
+    if animal:
+        name = random.choice(animalNames)
+        while name in names_in_use:
+            name = random.choice(animalNames)
+    else:
+        name = random.choice(names)
+        while name in names_in_use:
+            name = random.choice(names)
+    names_in_use.add(name)
+    return name
+
+
+def add_name(name, animal=False):
+    if animal:
+        animalNames.append(name)
+    else:
+        names.append(name)
+    if name in names_in_use:
+        names_in_use.remove(name)

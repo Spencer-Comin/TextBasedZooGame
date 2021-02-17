@@ -4,7 +4,7 @@ from enum import Enum
 class Type(Enum):
     DEATH = 0
     MOVE = 1
-    HATCH = 2
+    BIRTH = 2
     COMMAND = 3
     MOVE_PLAYER = 4
 
@@ -16,7 +16,7 @@ class AffecteesType(Enum):
 
 
 class Event:
-    def __init__(self, event: Type, asset=None, affects=(AffecteesType.NONE,), details=''):
+    def __init__(self, event: Type, asset=None, affects=(AffecteesType.NONE,), details={}):
         self.type = event
         self.asset = asset
         self.affectees = affects

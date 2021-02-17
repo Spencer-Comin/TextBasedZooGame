@@ -1,6 +1,6 @@
 import Event
 import random
-from Constants import FPS, names, animalNames
+from Utilities import FPS, get_name
 
 
 class NPC:
@@ -9,7 +9,9 @@ class NPC:
     adultPrint = ' '
     baby = bool(random.getrandbits(1))
 
-    def __init__(self, pos, name=random.choice(names)):
+    def __init__(self, pos, name=''):
+        if not name:
+            name = get_name()
         self.pos = pos
         self.name = name
 
@@ -35,6 +37,14 @@ class NPC:
         else:
             return self.adultPrint
 
+    def interact(self, other):
+        assert isinstance(other, NPC)
+
+    def die(self, notification):
+        return (Event.Event(Event.Type.DEATH, self,
+                            affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
+                            details={'notification': notification}))
+
 
 class Visitor(NPC):
     babyPrint = 'v'
@@ -45,15 +55,22 @@ class Animal(NPC):
     species = 'animal'
     speed = 2 / FPS
     name = ''
-    timeToGrowUp = 100 * FPS
+    timeToGrowUp = 150 * FPS
     hunger = 0
-    maxHunger = 150 * FPS
-    maxAge = 500 * FPS
+    maxHunger = 250 * FPS
+    maxAge = 700 * FPS
     baby = True
+    babyProbability = 0.005
 
-    def __init__(self, position, name=random.choice(animalNames)):
+    def __init__(self, position, name=''):
+        if not name:
+            name = get_name(animal=True)
         super(Animal, self).__init__(position, name)
         self.age = 0
+
+    @property
+    def title(self):
+        return f'{self.name} the {self.species}'
 
     def update(self):
         events = super(Animal, self).update()
@@ -62,29 +79,52 @@ class Animal(NPC):
         if self.age > self.timeToGrowUp:
             self.baby = False
         if self.hunger > self.maxHunger:
-            events = [(Event.Event(Event.Type.DEATH, self,
-                                   affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
-                                   details={'notification': f'{self.name} the {self.species} has died of hunger'}))]
+            events = [self.die(f'{self.title} has died of hunger')]
         elif self.age > self.maxAge:
-            events = [(Event.Event(Event.Type.DEATH, self,
-                                   affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
-                                   details={'notification': f'{self.name} the {self.species} has died of old age'}))]
+            events = [self.die(f'{self.title} has died of old age')]
         return events
 
     def feed(self):
         self.hunger = 0
 
+    def interact(self, other):
+        if type(self) is type(other) and not (self.baby or other.baby) and random.random() < self.babyProbability:
+            name = get_name(animal=True)
+            return Event.Event(Event.Type.BIRTH, type(self)(self.pos, name),
+                               affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
+                               details={'notification': f'{self.title} and {other.title} have given birth to {name}'})
 
-class Lion(Animal):
+
+class Predator(Animal):
+    attackProbability = 0.8
+
+    def interact(self, other):
+        if not isinstance(other, Predator):
+            if random.random() < self.attackProbability:
+                try:
+                    return other.die(f'{self.title} attacked and killed {other.title}')
+                except AttributeError:
+                    return other.die(f'{self.title} attacked and killed {other.name}')
+        else:
+            return super().interact(other)
+
+
+class Lion(Predator):
     species = 'lion'
     babyPrint = 'l'
     adultPrint = 'L'
 
 
-class Tiger(Animal):
+class Tiger(Predator):
     species = 'tiger'
     babyPrint = 't'
     adultPrint = 'T'
+
+
+class Jaguar(Predator):
+    species = 'jaguar'
+    babyPrint = 'j'
+    adultPrint = 'J'
 
 
 class Zebra(Animal):
@@ -93,10 +133,16 @@ class Zebra(Animal):
     adultPrint = 'Z'
 
 
-class Ostrich(Animal):
-    species = 'ostrich'
-    babyPrint = 'o'
-    adultPrint = 'O'
+class Camel(Animal):
+    species = 'camel'
+    babyPrint = 'c'
+    adultPrint = 'C'
+
+
+class Giraffe(Animal):
+    species = 'giraffe'
+    babyPrint = 'g'
+    adultPrint = 'G'
 
 
 class Moose(Animal):
@@ -105,11 +151,34 @@ class Moose(Animal):
     adultPrint = 'M'
 
 
+class Buffalo(Animal):
+    species = 'buffalo'
+    babyPrint = 'b'
+    adultPrint = 'B'
+
+
+class Penguin(Animal):
+    species = 'penguin'
+    babyPrint = 'p'
+    adultPrint = 'P'
+
+
+class Yak(Animal):
+    species = 'yak'
+    babyPrint = 'y'
+    adultPrint = 'Y'
+
+
 NPCLookup = {
     'V': Visitor,
     'L': Lion,
     'T': Tiger,
     'Z': Zebra,
-    'O': Ostrich,
-    'M': Moose
+    'C': Camel,
+    'M': Moose,
+    'G': Giraffe,
+    'B': Buffalo,
+    'P': Penguin,
+    'Y': Yak,
+    'J': Jaguar
 }

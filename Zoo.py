@@ -1,5 +1,6 @@
 import Event
 from NPC import NPCLookup, Animal
+from Utilities import neighbours, add_name
 
 
 class Zoo:
@@ -17,6 +18,10 @@ class Zoo:
         self.playerChar = player_char
         self.map = self.build_from_file(filename)
         self.analyze_map()
+
+    @property
+    def npc_positions(self):
+        return {npc.pos: npc for npc in self.npcs}
 
     @staticmethod
     def build_from_file(filename):
@@ -65,33 +70,37 @@ class Zoo:
         return [event for event in self.events if Event.AffecteesType.PLAYER in event.affectees] + new_events
 
     def handle_event(self, event):
+        responses = []
         if event.type is Event.Type.DEATH:
-            # remove dead animal
-            dead_animal = event.asset
+            # remove dead npc
+            dead_npc = event.asset
             try:
-                self.npcs.remove(dead_animal)
+                self.npcs.remove(dead_npc)
             except KeyError:
                 # idk what's going on here
-                assert dead_animal not in self.npcs
-            x, y = dead_animal.pos
+                assert dead_npc not in self.npcs
+            x, y = dead_npc.pos
             self.map[x][y] = ' '
-            # change affectees list and pass on event
-            event.affectees = (Event.AffecteesType.PLAYER,)
-            return [event]
-        if event.type is Event.Type.MOVE:
-            animal = event.asset
+            # recycle name
+            add_name(dead_npc.name, animal=isinstance(dead_npc, Animal))
+        elif event.type is Event.Type.MOVE:
+            npc = event.asset
             try:
                 new_position = event.details['position']
                 if new_position not in (self.walls | self.gates) - self.openGates:
-                    x, y = animal.pos
+                    x, y = npc.pos
                     self.map[x][y] = ' '
-                    animal.pos = new_position
+                    npc.pos = new_position
                     x, y = new_position
-                    self.map[x][y] = animal.character
+                    self.map[x][y] = npc.character
+                    for position in neighbours(new_position) & set(self.npc_positions.keys()):
+                        other = self.npc_positions[position]
+                        new_event = npc.interact(other)
+                        if new_event is not None:
+                            self.events.append(new_event)
             except KeyError:
                 print('Error getting position from details in MOVE event')
-            return []
-        if event.type is Event.Type.MOVE_PLAYER:
+        elif event.type is Event.Type.MOVE_PLAYER:
             try:
                 change = event.details['move']
                 new_position = (self.playerPos[0] + change[0], self.playerPos[1] + change[1])
@@ -105,5 +114,14 @@ class Zoo:
                 print('Error getting position from details in MOVE_PLAYER event')
                 # change affectees list and pass on event
             event.affectees = (Event.AffecteesType.PLAYER,)
-            return [event]
+            responses.append(event)
+        elif event.type is Event.Type.BIRTH:
+            baby = event.asset
+            x, y = baby.pos
+            self.map[x][y] = baby.character
+            self.npcs.add(baby)
+            event.affectees = (Event.AffecteesType.PLAYER,)
+            responses.append(event)
+        return responses
+
 
