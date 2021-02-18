@@ -78,6 +78,7 @@ class Zoo:
                 self.npcs.remove(dead_npc)
             except KeyError:
                 # idk what's going on here
+                print('mystery zone')
                 assert dead_npc not in self.npcs
             x, y = dead_npc.pos
             self.map[x][y] = ' '
@@ -97,7 +98,7 @@ class Zoo:
                         other = self.npc_positions[position]
                         new_event = npc.interact(other)
                         if new_event is not None:
-                            self.events.append(new_event)
+                            responses.append(new_event)
             except KeyError:
                 print('Error getting position from details in MOVE event')
         elif event.type is Event.Type.MOVE_PLAYER:
@@ -120,8 +121,8 @@ class Zoo:
             x, y = baby.pos
             self.map[x][y] = baby.character
             self.npcs.add(baby)
-            event.affectees = (Event.AffecteesType.PLAYER,)
-            responses.append(event)
+            # event.affectees = (Event.AffecteesType.PLAYER,)
+            # responses.append(event)
         return responses
 
 

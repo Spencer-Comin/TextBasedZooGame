@@ -1,5 +1,5 @@
-from NPC import Animal
-from Utilities import neighbours
+from NPC import Animal, Visitor
+from Utilities import neighbours, get_feeling, get_fact
 
 import sys
 
@@ -17,7 +17,8 @@ class CommandHandler:
             'feed': self.feed,
             'get': self.get,
             'check': self.check,
-            'help': self.help
+            'help': self.help,
+            'info': self.info
         }
 
     def notify(self, message):
@@ -33,6 +34,20 @@ class CommandHandler:
     def help(self):
         for key in self.lookup:
             self.notify(key)
+
+    def info(self, obj=''):
+        # find animals
+        if not obj:
+            nearby_npcs = [npc for npc in self.zoo.npcs if npc.pos in neighbours(self.zoo.playerPos, dist=2)]
+            for npc in nearby_npcs:
+                if isinstance(npc, Animal):
+                    self.notify(f'{npc.title}, age: {npc.age}, hunger: {npc.hunger}, max hunger: {npc.maxHunger}')
+                elif isinstance(npc, Visitor):
+                    self.notify(f'{npc.name} is feeling {get_feeling()}')
+            if not nearby_npcs:
+                self.notify(f'nothing nearby to get info on, enjoy this animal fact:\n\t{get_fact()}')
+        else:
+            self.notify(f'getting info on {obj} is not yet implemented')
 
     def check(self, *objs):
         if 'inventory' in objs or not objs:
@@ -74,6 +89,10 @@ class CommandHandler:
             if obj == 'food':
                 self.player.inventory['food'] += amount
                 self.notify(f'getting {amount} food')
+            elif obj == 'info':
+                self.info()
+            elif obj == 'help':
+                self.help()
             else:
                 self.notify(f'cannot get {obj}')
         else:

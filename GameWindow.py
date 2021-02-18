@@ -6,7 +6,7 @@ from Utilities import FPS
 
 class GameFrame(wx.Frame):
     def __init__(self, game):
-        super(GameFrame, self).__init__(None, title='Zoo', size=(800, 800))
+        super(GameFrame, self).__init__(None, title='Zoo', size=(765, 800))
         self.printer = Printer(self)
 
         self.game = game

@@ -41,6 +41,7 @@ class NPC:
         assert isinstance(other, NPC)
 
     def die(self, notification):
+        print(f'death notification emitted for {self}')
         return (Event.Event(Event.Type.DEATH, self,
                             affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
                             details={'notification': notification}))
@@ -57,15 +58,15 @@ class Animal(NPC):
     name = ''
     timeToGrowUp = 150 * FPS
     hunger = 0
-    maxHunger = 250 * FPS
+    maxHunger = 300 * FPS
     maxAge = 700 * FPS
     baby = True
-    babyProbability = 0.005
+    babyProbability = 0.002
 
     def __init__(self, position, name=''):
         if not name:
             name = get_name(animal=True)
-        super(Animal, self).__init__(position, name)
+        super().__init__(position, name)
         self.age = 0
 
     @property
@@ -73,14 +74,14 @@ class Animal(NPC):
         return f'{self.name} the {self.species}'
 
     def update(self):
-        events = super(Animal, self).update()
+        events = super().update()
         self.age += 1
-        self.hunger += 2
-        if self.age > self.timeToGrowUp:
+        self.hunger += 1
+        if self.age == self.timeToGrowUp:
             self.baby = False
-        if self.hunger > self.maxHunger:
+        if self.hunger == self.maxHunger:
             events = [self.die(f'{self.title} has died of hunger')]
-        elif self.age > self.maxAge:
+        elif self.age == self.maxAge:
             events = [self.die(f'{self.title} has died of old age')]
         return events
 
@@ -101,9 +102,9 @@ class Predator(Animal):
     def interact(self, other):
         if not isinstance(other, Predator):
             if random.random() < self.attackProbability:
-                try:
+                if isinstance(other, Animal):
                     return other.die(f'{self.title} attacked and killed {other.title}')
-                except AttributeError:
+                elif isinstance(other, Visitor):
                     return other.die(f'{self.title} attacked and killed {other.name}')
         else:
             return super().interact(other)

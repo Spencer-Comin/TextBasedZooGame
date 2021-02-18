@@ -35,6 +35,5 @@ class Game:
         if Event.AffecteesType.ZOO in event.affectees:
             self.zoo.events.append(event)
         if Event.AffecteesType.NONE in event.affectees:
-            print(event)
             self.notifications.append(event.details.get('command', ''))
             self.commandHandler.execute(event.details.get('command', ''))
