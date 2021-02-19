@@ -5,4 +5,5 @@
 /dist/
 /build_resources/
 /setup.py
-/.eggs
+/.eggs/
+/packages/

@@ -51,6 +51,10 @@ class Visitor(NPC):
     babyPrint = 'v'
     adultPrint = 'V'
 
+    def __init__(self, pos):
+        super().__init__(pos)
+        self.baby = bool(random.getrandbits(1))
+
 
 class Animal(NPC):
     species = 'animal'

@@ -7,6 +7,8 @@ class Type(Enum):
     BIRTH = 2
     COMMAND = 3
     MOVE_PLAYER = 4
+    VISITOR_ENTER = 5
+    VISITOR_EXIT = 6
 
 
 class AffecteesType(Enum):
