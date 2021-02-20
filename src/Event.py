@@ -4,10 +4,9 @@ from enum import Enum
 class Type(Enum):
     DEATH = 0
     MOVE = 1
-    BIRTH = 2
+    SPAWN_NPC = 2
     COMMAND = 3
     MOVE_PLAYER = 4
-    VISITOR_ENTER = 5
     VISITOR_EXIT = 6
 
 

@@ -9,6 +9,7 @@ class Zoo:
     openGateChar = ' '
     closedGateChar = '='
     visitorFlux = 0.004
+    maxNPCs = 200
 
     def __init__(self, filename, player_char):
         self.npcs = set()
@@ -77,10 +78,10 @@ class Zoo:
 
     def attempt_visitor_enter(self):
         for entrance in self.entrances:
-            if random.random() < self.visitorFlux:
+            if random.random() < self.visitorFlux and len(self.npcs) < self.maxNPCs:
                 new_visitor = Visitor(entrance)
                 self.events.append(Event.Event(
-                    Event.Type.VISITOR_ENTER,
+                    Event.Type.SPAWN_NPC,
                     affects=(Event.AffecteesType.PLAYER, Event.AffecteesType.ZOO),
                     asset=new_visitor,
                     details={'notification': f'{new_visitor.name} has entered the zoo'}
@@ -104,7 +105,6 @@ class Zoo:
                 self.npcs.remove(dead_npc)
             except KeyError:
                 # idk what's going on here
-                print('mystery zone')
                 assert dead_npc not in self.npcs
             x, y = dead_npc.pos
             self.map[x][y] = ' '
@@ -125,7 +125,8 @@ class Zoo:
                         new_event = npc.interact(other)
                         if new_event is not None:
                             responses.append(new_event)
-                    if isinstance(npc, Visitor) and min([distance(npc.pos, entrance) for entrance in self.entrances]) < 4:
+                    if isinstance(npc, Visitor) and min([distance(npc.pos, entrance) for entrance in self.entrances if
+                                                         entrance is not npc.start]) < 4:
                         new_event = self.attempt_visitor_exit(npc)
                         if new_event is not None:
                             responses.append(new_event)
@@ -146,22 +147,15 @@ class Zoo:
                 # change affectees list and pass on event
             event.affectees = (Event.AffecteesType.PLAYER,)
             responses.append(event)
-        elif event.type is Event.Type.BIRTH:
-            baby = event.asset
-            x, y = baby.pos
-            self.map[x][y] = baby.character
-            self.npcs.add(baby)
+        elif event.type is Event.Type.SPAWN_NPC:
+            npc = event.asset
+            x, y = npc.pos
+            self.map[x][y] = npc.character
+            self.npcs.add(npc)
         elif event.type is Event.Type.VISITOR_EXIT:
             visitor = event.asset
             self.npcs.remove(visitor)
             x, y = visitor.pos
             self.map[x][y] = ' '
             add_name(visitor.name)
-        elif event.type is Event.Type.VISITOR_ENTER:
-            visitor = event.asset
-            x, y = visitor.pos
-            self.map[x][y] = visitor.character
-            self.npcs.add(visitor)
         return responses
-
-

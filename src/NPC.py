@@ -53,6 +53,7 @@ class Visitor(NPC):
 
     def __init__(self, pos):
         super().__init__(pos)
+        self.start = pos
         self.baby = bool(random.getrandbits(1))
 
 
@@ -95,7 +96,7 @@ class Animal(NPC):
     def interact(self, other):
         if type(self) is type(other) and not (self.baby or other.baby) and random.random() < self.babyProbability:
             name = get_name(animal=True)
-            return Event.Event(Event.Type.BIRTH, type(self)(self.pos, name),
+            return Event.Event(Event.Type.SPAWN_NPC, type(self)(self.pos, name),
                                affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
                                details={'notification': f'{self.title} and {other.title} have given birth to {name}'})
 
