@@ -1,18 +1,22 @@
 import Event
-from NPC import NPCLookup, Animal
-from Utilities import neighbours, add_name
+from NPC import NPCLookup, Animal, Visitor
+from Utilities import neighbours, add_name, distance
+import random
 
 
 class Zoo:
     events = []
     openGateChar = ' '
     closedGateChar = '='
+    visitorFlux = 0.004
+    maxNPCs = 200
 
     def __init__(self, filename, player_char):
         self.npcs = set()
         self.walls = set()
         self.gates = set()
         self.openGates = set()
+        self.entrances = set()
         self.warehouseCorners = [(0, 0), (0, 0)]
         self.playerPos = ()
         self.playerChar = player_char
@@ -42,6 +46,8 @@ class Zoo:
                 elif tile == '*':
                     self.walls.add((i, j))
                     warehouse_corners.append((i, j))
+                elif tile == '%':
+                    self.entrances.add((i, j))
                 elif tile == self.playerChar:
                     self.playerPos = (i, j)
                 elif tile.upper() in NPCLookup.keys():
@@ -67,9 +73,30 @@ class Zoo:
             new_events.extend(self.handle_event(event))
         for animal in self.npcs:
             self.events.extend(animal.update())
+        self.attempt_visitor_enter()
         return [event for event in self.events if Event.AffecteesType.PLAYER in event.affectees] + new_events
 
-    def handle_event(self, event):
+    def attempt_visitor_enter(self):
+        for entrance in self.entrances:
+            if random.random() < self.visitorFlux and len(self.npcs) < self.maxNPCs:
+                new_visitor = Visitor(entrance)
+                self.events.append(Event.Event(
+                    Event.Type.SPAWN_NPC,
+                    affects=(Event.AffecteesType.PLAYER, Event.AffecteesType.ZOO),
+                    asset=new_visitor,
+                    details={'notification': f'{new_visitor.name} has entered the zoo'}
+                ))
+
+    def attempt_visitor_exit(self, visitor):
+        if random.random() < self.visitorFlux:
+            return Event.Event(
+                Event.Type.VISITOR_EXIT,
+                affects=(Event.AffecteesType.PLAYER, Event.AffecteesType.ZOO),
+                asset=visitor,
+                details={'notification': f'{visitor.name} has left the zoo'}
+            )
+
+    def handle_event(self, event: Event.Event):
         responses = []
         if event.type is Event.Type.DEATH:
             # remove dead npc
@@ -78,7 +105,6 @@ class Zoo:
                 self.npcs.remove(dead_npc)
             except KeyError:
                 # idk what's going on here
-                print('mystery zone')
                 assert dead_npc not in self.npcs
             x, y = dead_npc.pos
             self.map[x][y] = ' '
@@ -99,6 +125,11 @@ class Zoo:
                         new_event = npc.interact(other)
                         if new_event is not None:
                             responses.append(new_event)
+                    if isinstance(npc, Visitor) and min([distance(npc.pos, entrance) for entrance in self.entrances if
+                                                         entrance is not npc.start]) < 4:
+                        new_event = self.attempt_visitor_exit(npc)
+                        if new_event is not None:
+                            responses.append(new_event)
             except KeyError:
                 print('Error getting position from details in MOVE event')
         elif event.type is Event.Type.MOVE_PLAYER:
@@ -116,13 +147,15 @@ class Zoo:
                 # change affectees list and pass on event
             event.affectees = (Event.AffecteesType.PLAYER,)
             responses.append(event)
-        elif event.type is Event.Type.BIRTH:
-            baby = event.asset
-            x, y = baby.pos
-            self.map[x][y] = baby.character
-            self.npcs.add(baby)
-            # event.affectees = (Event.AffecteesType.PLAYER,)
-            # responses.append(event)
+        elif event.type is Event.Type.SPAWN_NPC:
+            npc = event.asset
+            x, y = npc.pos
+            self.map[x][y] = npc.character
+            self.npcs.add(npc)
+        elif event.type is Event.Type.VISITOR_EXIT:
+            visitor = event.asset
+            self.npcs.remove(visitor)
+            x, y = visitor.pos
+            self.map[x][y] = ' '
+            add_name(visitor.name)
         return responses
-
-
