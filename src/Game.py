@@ -16,7 +16,8 @@ class Game:
         super().__init__()
         self.player = Player(emit_method)
         self.zoo = Zoo(filename, self.player.char, emit_method)
-        self.commandHandler = CommandHandler(self.zoo, self.player, Warehouse(self.zoo.in_warehouse))
+        self.commandHandler = CommandHandler(self.zoo, self.player, Warehouse(self.zoo.in_warehouse, self.player),
+                                             emit_method)
         self.eventRouter.add_listener(self.player, Event.AffecteesType.PLAYER)
         self.eventRouter.add_listener(self.zoo, Event.AffecteesType.ZOO)
         self.eventRouter.add_listener(self, Event.AffecteesType.PLAYER)
@@ -24,7 +25,6 @@ class Game:
 
     def set_notifications(self, notifications):
         self.notifications = notifications
-        self.commandHandler.notificationsDump = notifications
 
     def update(self):
         self.zoo.update()

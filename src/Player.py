@@ -13,9 +13,9 @@ class Player:
 
     def handle_event(self, event: Event.Event):
         if event.type is Event.Type.ADD_TO_INVENTORY:
-            self.inventory[event.asset] += event.details['amount']
+            self.add_to_inventory(event.asset, event.details['amount'])
         elif event.type is Event.Type.REMOVE_FROM_INVENTORY:
-            self.inventory[event.asset] -= event.details['amount']
+            self.remove_from_inventory(event.asset, event.details['amount'])
 
     @property
     def inventory_size(self):
@@ -24,4 +24,7 @@ class Player:
     def add_to_inventory(self, obj, amount):
         if amount + self.inventory_size <= self.inventoryMax:
             self.inventory[obj] += amount
+
+    def remove_from_inventory(self, obj, amount):
+        self.inventory[obj] -= amount
 
