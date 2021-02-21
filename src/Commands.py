@@ -1,31 +1,55 @@
-from NPC import Animal, Visitor
+from NPC import Animal, Visitor, NPCLookup
 from Utilities import neighbours, get_feeling, get_fact
+import Event
 
 import sys
 
 
 class CommandHandler:
-    notificationsDump = []
 
-    def __init__(self, zoo, player):
+    def __init__(self, zoo, player, warehouse, emit_method):
         self.zoo = zoo
         self.player = player
+        self.warehouse = warehouse
+        self.emit = emit_method
         self.lookup = {
             'open': self.open,
             'close': self.close,
             'error': lambda x: self.notify(f'{x} is not a valid command'),
             'feed': self.feed,
-            'get': self.get,
             'check': self.check,
             'help': self.help,
-            'info': self.info
+            'info': self.info,
+            'buy': self.warehouse.buy,
+            'sell': self.warehouse.sell,
+            'place': self.place
         }
 
     def notify(self, message):
-        self.notificationsDump.append(message)
+        self.emit(Event.Event(details={'notification': message}))
+
+    def place(self, obj):
+        if obj not in self.player.inventory or self.player.inventory[obj] < 1:
+            self.notify(f'{obj} not in inventory')
+        else:
+            self.player.inventory[obj] -= 1
+            key = obj[0].upper()
+            if key in NPCLookup:
+                animal = NPCLookup[key](self.zoo.playerPos, self.emit)
+                self.emit(Event.Event(Event.Type.SPAWN_NPC,
+                                      asset=animal,
+                                      affects=(Event.AffecteesType.PLAYER, Event.AffecteesType.ZOO),
+                                      details={'notification': f'placed {animal.title}'}))
+            else:
+                self.notify(f'{obj} cannot be placed')
 
     def parse(self, command_string):
-        tokens = command_string.split(' ')
+        tokens = []
+        for token in command_string.split(' '):
+            if token.isdigit():
+                tokens.append(int(token))
+            else:
+                tokens.append(token)
         if tokens[0] in self.lookup.keys():
             return tokens[0], tokens[1:]
         else:
@@ -52,9 +76,11 @@ class CommandHandler:
     def check(self, *objs):
         if 'inventory' in objs or not objs:
             for item, count in self.player.inventory.items():
-                self.notify(f'{count} {item}')
+                if count > 0:
+                    self.notify(f'{count} {item}')
         elif 'warehouse' in objs:
-            pass
+            for item, price in self.warehouse.priceList.items():
+                self.notify(f'{item}: ${price}')
         else:
             for obj in objs:
                 self.check_item(obj)
@@ -78,31 +104,13 @@ class CommandHandler:
         if not nearby_animals:
             self.notify('no animals nearby to feed')
 
-    def get(self, amount, obj=''):
-        try:
-            amount = int(amount)
-        except ValueError:
-            # only one input given, switch around parameters
-            obj = amount
-            amount = 1
-        if self.zoo.in_warehouse():
-            if obj == 'food':
-                self.player.inventory['food'] += amount
-                self.notify(f'getting {amount} food')
-            elif obj == 'info':
-                self.info()
-            elif obj == 'help':
-                self.help()
-            else:
-                self.notify(f'cannot get {obj}')
-        else:
-            self.notify('cannot get anything because you are not in the warehouse')
-
-    def open(self, obj):
+    def open(self, obj=''):
         if obj == 'gate':
             self.open_gate()
-        else:
+        elif obj:
             self.notify(f'{obj} cannot be opened')
+        else:
+            self.notify("try 'open gate'")
 
     def open_gate(self):
         zoo = self.zoo
@@ -119,11 +127,13 @@ class CommandHandler:
         else:
             self.notify('no gates nearby')
 
-    def close(self, obj):
+    def close(self, obj=''):
         if obj == 'gate':
             self.close_gate()
+        elif obj:
+            self.notify(f'{obj} cannot be closed')
         else:
-            self.notify(f'{obj} cannot be opened')
+            self.notify("try 'close gate'")
 
     def close_gate(self):
         zoo = self.zoo
