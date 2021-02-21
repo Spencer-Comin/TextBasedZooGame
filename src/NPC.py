@@ -9,26 +9,24 @@ class NPC:
     adultPrint = ' '
     baby = bool(random.getrandbits(1))
 
-    def __init__(self, pos, name=''):
+    def __init__(self, pos, emit, name=''):
         if not name:
             name = get_name()
         self.pos = pos
         self.name = name
+        self.emit = emit
 
     def attempt_move(self):
         if random.random() < self.speed:
             x, y = self.pos
             new_pos = random.choice([(x + 1, y), (x, y + 1), (x - 1, y), (x, y - 1)])
 
-            return Event.Event(Event.Type.MOVE, self,
-                               affects=(Event.AffecteesType.ZOO,),
-                               details={'position': new_pos})
+            self.emit(Event.Event(Event.Type.MOVE, self,
+                                  affects=(Event.AffecteesType.ZOO,),
+                                  details={'position': new_pos}))
 
     def update(self):
-        move = self.attempt_move()
-        if move is not None:
-            return [move]
-        return []
+        self.attempt_move()
 
     @property
     def character(self):
@@ -41,15 +39,19 @@ class NPC:
         assert isinstance(other, NPC)
 
     def die(self, notification):
-        print(f'death notification emitted for {self}')
-        return (Event.Event(Event.Type.DEATH, self,
-                            affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
-                            details={'notification': notification}))
+        self.emit(Event.Event(Event.Type.DEATH, self,
+                              affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
+                              details={'notification': notification}))
 
 
 class Visitor(NPC):
     babyPrint = 'v'
     adultPrint = 'V'
+
+    def __init__(self, pos, emit):
+        super().__init__(pos, emit)
+        self.start = pos
+        self.baby = bool(random.getrandbits(1))
 
 
 class Animal(NPC):
@@ -63,27 +65,32 @@ class Animal(NPC):
     baby = True
     babyProbability = 0.002
 
-    def __init__(self, position, name=''):
+    def __init__(self, position, emit, name=''):
         if not name:
             name = get_name(animal=True)
-        super().__init__(position, name)
+        super().__init__(position, emit, name)
         self.age = 0
+        self.maxHunger += random.randint(0, 120) * FPS
+        self.maxAge += random.randint(0, 180) * FPS
 
     @property
     def title(self):
         return f'{self.name} the {self.species}'
 
     def update(self):
-        events = super().update()
         self.age += 1
         self.hunger += 1
         if self.age == self.timeToGrowUp:
             self.baby = False
+            self.emit(Event.Event(details={'notification': f'{self.title} has grown up'}))
+        if self.hunger == (self.maxHunger * 10) // 9:
+            self.emit(Event.Event(details={'notification': f'{self.title} is starving'}))
         if self.hunger == self.maxHunger:
-            events = [self.die(f'{self.title} has died of hunger')]
+            self.die(f'{self.title} has died of hunger')
         elif self.age == self.maxAge:
-            events = [self.die(f'{self.title} has died of old age')]
-        return events
+            self.die(f'{self.title} has died of old age')
+        else:
+            super().update()
 
     def feed(self):
         self.hunger = 0
@@ -91,9 +98,10 @@ class Animal(NPC):
     def interact(self, other):
         if type(self) is type(other) and not (self.baby or other.baby) and random.random() < self.babyProbability:
             name = get_name(animal=True)
-            return Event.Event(Event.Type.BIRTH, type(self)(self.pos, name),
-                               affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
-                               details={'notification': f'{self.title} and {other.title} have given birth to {name}'})
+            self.emit(Event.Event(Event.Type.SPAWN_NPC, type(self)(self.pos, self.emit, name),
+                                  affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
+                                  details={
+                                      'notification': f'{self.title} and {other.title} have given birth to {name}'}))
 
 
 class Predator(Animal):
@@ -103,11 +111,12 @@ class Predator(Animal):
         if not isinstance(other, Predator):
             if random.random() < self.attackProbability:
                 if isinstance(other, Animal):
-                    return other.die(f'{self.title} attacked and killed {other.title}')
+                    other.die(f'{self.title} attacked and killed {other.title}')
                 elif isinstance(other, Visitor):
-                    return other.die(f'{self.title} attacked and killed {other.name}')
+                    other.die(f'{self.title} attacked and killed {other.name}')
+                self.hunger = 0
         else:
-            return super().interact(other)
+            super().interact(other)
 
 
 class Lion(Predator):

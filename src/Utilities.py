@@ -16,6 +16,13 @@ def neighbours(pos, dist=1):
     return built - {pos}
 
 
+def distance(a, b):
+    """taxicab distance between points a and b"""
+    xa, ya = a
+    xb, yb = b
+    return abs(xa - xb) + abs(ya - yb)
+
+
 names = ['Abella', 'Anaïs', 'Astoria', 'Azura', 'Berlin', 'Blanca', 'Blue', 'Callista', 'Devina', 'Dove',
          'Eugenia', 'Fern', 'Fleur', 'Jessalyn', 'Juna', 'Kani', 'Keva', 'Lake', 'Lavender', 'Lira', 'Lotte',
          'Lourdes', 'Mariposa', 'Maude', 'Maven', 'Minerva', 'Moxie', 'Nairobi', 'Nella', 'Nikita', 'Oceana',

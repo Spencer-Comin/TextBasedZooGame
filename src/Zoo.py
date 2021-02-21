@@ -1,18 +1,22 @@
 import Event
-from NPC import NPCLookup, Animal
-from Utilities import neighbours, add_name
+from NPC import NPCLookup, Animal, Visitor
+from Utilities import neighbours, add_name, distance
+import random
 
 
 class Zoo:
-    events = []
     openGateChar = ' '
     closedGateChar = '='
+    visitorFlux = 0.004
+    maxNPCs = 80
 
-    def __init__(self, filename, player_char):
+    def __init__(self, filename, player_char, emit):
         self.npcs = set()
+        self.emit = emit
         self.walls = set()
         self.gates = set()
         self.openGates = set()
+        self.entrances = set()
         self.warehouseCorners = [(0, 0), (0, 0)]
         self.playerPos = ()
         self.playerChar = player_char
@@ -22,6 +26,10 @@ class Zoo:
     @property
     def npc_positions(self):
         return {npc.pos: npc for npc in self.npcs}
+
+    @property
+    def animals(self):
+        return {npc for npc in self.npcs if isinstance(npc, Animal)}
 
     @staticmethod
     def build_from_file(filename):
@@ -42,10 +50,12 @@ class Zoo:
                 elif tile == '*':
                     self.walls.add((i, j))
                     warehouse_corners.append((i, j))
+                elif tile == '%':
+                    self.entrances.add((i, j))
                 elif tile == self.playerChar:
                     self.playerPos = (i, j)
                 elif tile.upper() in NPCLookup.keys():
-                    npc = NPCLookup[tile.upper()]((i, j))
+                    npc = NPCLookup[tile.upper()]((i, j), self.emit)
                     npc.baby = tile.islower()
                     if not npc.baby and isinstance(npc, Animal):
                         npc.age = npc.timeToGrowUp
@@ -61,16 +71,39 @@ class Zoo:
         return x1 < x < x2 and y1 < y < y2
 
     def update(self):
-        new_events = []
-        while self.events:
-            event = self.events.pop()
-            new_events.extend(self.handle_event(event))
         for animal in self.npcs:
-            self.events.extend(animal.update())
-        return [event for event in self.events if Event.AffecteesType.PLAYER in event.affectees] + new_events
+            animal.update()
+        self.attempt_visitor_enter()
 
-    def handle_event(self, event):
-        responses = []
+    def attempt_visitor_enter(self):
+        for entrance in self.entrances:
+            if random.random() < self.visitorFlux and len(self.npcs) < self.maxNPCs:
+                new_visitor = Visitor(entrance, self.emit)
+                entrance_fee = len(self.animals)
+                self.emit(Event.Event(
+                    Event.Type.SPAWN_NPC,
+                    affects=(Event.AffecteesType.PLAYER, Event.AffecteesType.ZOO),
+                    asset=new_visitor,
+                    details={'notification': f'{new_visitor.name} has entered the zoo'}
+                ))
+                self.emit(Event.Event(
+                    Event.Type.ADD_TO_INVENTORY,
+                    affects=(Event.AffecteesType.PLAYER,),
+                    asset='money',
+                    details={'notification': f'{new_visitor.name} paid ${entrance_fee}',
+                             'amount': entrance_fee}
+                ))
+
+    def attempt_visitor_exit(self, visitor):
+        if random.random() < self.visitorFlux:
+            self.emit(Event.Event(
+                Event.Type.VISITOR_EXIT,
+                affects=(Event.AffecteesType.PLAYER, Event.AffecteesType.ZOO),
+                asset=visitor,
+                details={'notification': f'{visitor.name} has left the zoo'}
+            ))
+
+    def handle_event(self, event: Event.Event):
         if event.type is Event.Type.DEATH:
             # remove dead npc
             dead_npc = event.asset
@@ -78,7 +111,6 @@ class Zoo:
                 self.npcs.remove(dead_npc)
             except KeyError:
                 # idk what's going on here
-                print('mystery zone')
                 assert dead_npc not in self.npcs
             x, y = dead_npc.pos
             self.map[x][y] = ' '
@@ -97,8 +129,9 @@ class Zoo:
                     for position in neighbours(new_position) & set(self.npc_positions.keys()):
                         other = self.npc_positions[position]
                         new_event = npc.interact(other)
-                        if new_event is not None:
-                            responses.append(new_event)
+                    if isinstance(npc, Visitor) and min([distance(npc.pos, entrance) for entrance in self.entrances if
+                                                         entrance is not npc.start]) < 5:
+                        self.attempt_visitor_exit(npc)
             except KeyError:
                 print('Error getting position from details in MOVE event')
         elif event.type is Event.Type.MOVE_PLAYER:
@@ -113,16 +146,18 @@ class Zoo:
                     self.map[x][y] = self.playerChar
             except KeyError:
                 print('Error getting position from details in MOVE_PLAYER event')
-                # change affectees list and pass on event
-            event.affectees = (Event.AffecteesType.PLAYER,)
-            responses.append(event)
-        elif event.type is Event.Type.BIRTH:
-            baby = event.asset
-            x, y = baby.pos
-            self.map[x][y] = baby.character
-            self.npcs.add(baby)
-            # event.affectees = (Event.AffecteesType.PLAYER,)
-            # responses.append(event)
-        return responses
-
-
+        elif event.type is Event.Type.SPAWN_NPC:
+            npc = event.asset
+            x, y = npc.pos
+            self.map[x][y] = npc.character
+            self.npcs.add(npc)
+        elif event.type is Event.Type.VISITOR_EXIT:
+            visitor = event.asset
+            try:
+                self.npcs.remove(visitor)
+            except KeyError:
+                # weird stuff
+                pass
+            x, y = visitor.pos
+            self.map[x][y] = ' '
+            add_name(visitor.name)
