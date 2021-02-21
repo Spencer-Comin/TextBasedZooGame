@@ -39,9 +39,11 @@ class Warehouse:
             if obj in self.priceList:
                 cost = amount * self.priceList[obj]
                 if cost <= self.player.inventory['money']:
-                    self.player.add_to_inventory(obj, amount)
-                    self.player.remove_from_inventory('money', cost)
-                    self.notify(f'bought {amount} {obj} for ${cost}')
+                    if self.player.add_to_inventory(obj, amount):
+                        self.player.remove_from_inventory('money', cost)
+                        self.notify(f'bought {amount} {obj} for ${cost}')
+                    else:
+                        self.notify('not enough room in your inventory')
                 else:
                     self.notify(f"you don't have enough money to get {amount} {obj}")
             else:

@@ -24,6 +24,8 @@ class Player:
     def add_to_inventory(self, obj, amount):
         if amount + self.inventory_size <= self.inventoryMax:
             self.inventory[obj] += amount
+            return True
+        return False
 
     def remove_from_inventory(self, obj, amount):
         self.inventory[obj] -= amount
