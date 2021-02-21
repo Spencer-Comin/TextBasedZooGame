@@ -1,5 +1,5 @@
 from NPC import Animal, Visitor, NPCLookup
-from Utilities import neighbours, get_feeling, get_fact
+from Utilities import neighbours, get_feeling, get_fact, FPS, get_name, add_name
 import Event
 
 import sys
@@ -22,7 +22,8 @@ class CommandHandler:
             'info': self.info,
             'buy': self.warehouse.buy,
             'sell': self.warehouse.sell,
-            'place': self.place
+            'place': self.place,
+            'rename': self.rename
         }
 
     def notify(self, message):
@@ -59,13 +60,31 @@ class CommandHandler:
         for key in self.lookup:
             self.notify(key)
 
+    def rename(self, name='', *more_names):
+        if not name:
+            name = get_name()
+        if more_names:
+            name += ' ' + ' '.join(more_names)
+        try:
+            close_animal = [npc for npc in self.zoo.npcs if
+                            npc.pos in neighbours(self.zoo.playerPos, dist=2) and isinstance(npc, Animal)][0]
+            old_name = close_animal.name
+            old_title = close_animal.title
+            close_animal.name = name
+            self.notify(f'renaming {old_title} to {name}')
+            add_name(old_name, animal=True)
+        except IndexError:
+            self.notify('no animal nearby to rename')
+
     def info(self, obj=''):
-        # find animals
+        # find nearby npcs
         if not obj:
             nearby_npcs = [npc for npc in self.zoo.npcs if npc.pos in neighbours(self.zoo.playerPos, dist=2)]
             for npc in nearby_npcs:
                 if isinstance(npc, Animal):
-                    self.notify(f'{npc.title}, age: {npc.age}, hunger: {npc.hunger}, max hunger: {npc.maxHunger}')
+                    self.notify(
+                        f'{npc.title}, age: {(npc.age // FPS) / 60:.2f} days, '
+                        f'hunger: {npc.hunger / npc.maxHunger * 100:.0f}%')
                 elif isinstance(npc, Visitor):
                     self.notify(f'{npc.name} is feeling {get_feeling()}')
             if not nearby_npcs:

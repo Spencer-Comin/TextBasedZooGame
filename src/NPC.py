@@ -70,6 +70,8 @@ class Animal(NPC):
             name = get_name(animal=True)
         super().__init__(position, emit, name)
         self.age = 0
+        self.maxHunger += random.randint(0, 120) * FPS
+        self.maxAge += random.randint(0, 180) * FPS
 
     @property
     def title(self):
@@ -80,6 +82,9 @@ class Animal(NPC):
         self.hunger += 1
         if self.age == self.timeToGrowUp:
             self.baby = False
+            self.emit(Event.Event(details={'notification': f'{self.title} has grown up'}))
+        if self.hunger == (self.maxHunger * 10) // 9:
+            self.emit(Event.Event(details={'notification': f'{self.title} is starving'}))
         if self.hunger == self.maxHunger:
             self.die(f'{self.title} has died of hunger')
         elif self.age == self.maxAge:
