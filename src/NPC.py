@@ -39,7 +39,6 @@ class NPC:
         assert isinstance(other, NPC)
 
     def die(self, notification):
-        print(f'death notification emitted for {self}')
         self.emit(Event.Event(Event.Type.DEATH, self,
                               affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
                               details={'notification': notification}))
@@ -77,7 +76,6 @@ class Animal(NPC):
         return f'{self.name} the {self.species}'
 
     def update(self):
-        super().update()
         self.age += 1
         self.hunger += 1
         if self.age == self.timeToGrowUp:
@@ -86,6 +84,8 @@ class Animal(NPC):
             self.die(f'{self.title} has died of hunger')
         elif self.age == self.maxAge:
             self.die(f'{self.title} has died of old age')
+        else:
+            super().update()
 
     def feed(self):
         self.hunger = 0
@@ -93,7 +93,7 @@ class Animal(NPC):
     def interact(self, other):
         if type(self) is type(other) and not (self.baby or other.baby) and random.random() < self.babyProbability:
             name = get_name(animal=True)
-            self.emit(Event.Event(Event.Type.SPAWN_NPC, type(self)(self.pos, name),
+            self.emit(Event.Event(Event.Type.SPAWN_NPC, type(self)(self.pos, self.emit, name),
                                   affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
                                   details={
                                       'notification': f'{self.title} and {other.title} have given birth to {name}'}))
@@ -109,6 +109,7 @@ class Predator(Animal):
                     other.die(f'{self.title} attacked and killed {other.title}')
                 elif isinstance(other, Visitor):
                     other.die(f'{self.title} attacked and killed {other.name}')
+                self.hunger = 0
         else:
             super().interact(other)
 

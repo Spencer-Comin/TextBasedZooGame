@@ -12,8 +12,10 @@ class Player:
         self.emit = emit
 
     def handle_event(self, event: Event.Event):
-        if event.type is Event.Type.BALANCE_CHANGE:
-            self.inventory['money'] += event.details['change']
+        if event.type is Event.Type.ADD_TO_INVENTORY:
+            self.inventory[event.asset] += event.details['amount']
+        elif event.type is Event.Type.REMOVE_FROM_INVENTORY:
+            self.inventory[event.asset] -= event.details['amount']
 
     @property
     def inventory_size(self):

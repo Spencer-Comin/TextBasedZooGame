@@ -7,7 +7,7 @@ import sys
 class CommandHandler:
     notificationsDump = []
 
-    def __init__(self, zoo, player):
+    def __init__(self, zoo, player, warehouse):
         self.zoo = zoo
         self.player = player
         self.lookup = {
@@ -20,6 +20,7 @@ class CommandHandler:
             'help': self.help,
             'info': self.info
         }
+        self.warehouse = warehouse
 
     def notify(self, message):
         self.notificationsDump.append(message)
@@ -98,11 +99,13 @@ class CommandHandler:
         else:
             self.notify('cannot get anything because you are not in the warehouse')
 
-    def open(self, obj):
+    def open(self, obj=''):
         if obj == 'gate':
             self.open_gate()
-        else:
+        elif obj:
             self.notify(f'{obj} cannot be opened')
+        else:
+            self.notify("try 'open gate'")
 
     def open_gate(self):
         zoo = self.zoo
@@ -119,11 +122,13 @@ class CommandHandler:
         else:
             self.notify('no gates nearby')
 
-    def close(self, obj):
+    def close(self, obj=''):
         if obj == 'gate':
             self.close_gate()
+        elif obj:
+            self.notify(f'{obj} cannot be closed')
         else:
-            self.notify(f'{obj} cannot be opened')
+            self.notify("try 'close gate'")
 
     def close_gate(self):
         zoo = self.zoo

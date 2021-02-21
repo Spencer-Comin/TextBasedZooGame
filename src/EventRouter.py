@@ -18,7 +18,7 @@ class EventRouter:
         events_to_handle = self.events.copy()
         self.events.clear()
         while events_to_handle:
-            event = events_to_handle.pop()
+            event = events_to_handle.pop(0)
             for affect_type in event.affectees:
                 for listener in self.listeners[affect_type]:
                     listener.handle_event(event)

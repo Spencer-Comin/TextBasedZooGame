@@ -8,7 +8,7 @@ class Zoo:
     openGateChar = ' '
     closedGateChar = '='
     visitorFlux = 0.004
-    maxNPCs = 200
+    maxNPCs = 80
 
     def __init__(self, filename, player_char, emit):
         self.npcs = set()
@@ -87,20 +87,21 @@ class Zoo:
                     details={'notification': f'{new_visitor.name} has entered the zoo'}
                 ))
                 self.emit(Event.Event(
-                    Event.Type.BALANCE_CHANGE,
+                    Event.Type.ADD_TO_INVENTORY,
                     affects=(Event.AffecteesType.PLAYER,),
+                    asset='money',
                     details={'notification': f'{new_visitor.name} paid ${entrance_fee}',
-                             'change': entrance_fee}
+                             'amount': entrance_fee}
                 ))
 
     def attempt_visitor_exit(self, visitor):
         if random.random() < self.visitorFlux:
-            self.emit(
+            self.emit(Event.Event(
                 Event.Type.VISITOR_EXIT,
                 affects=(Event.AffecteesType.PLAYER, Event.AffecteesType.ZOO),
                 asset=visitor,
                 details={'notification': f'{visitor.name} has left the zoo'}
-            )
+            ))
 
     def handle_event(self, event: Event.Event):
         if event.type is Event.Type.DEATH:
@@ -129,7 +130,7 @@ class Zoo:
                         other = self.npc_positions[position]
                         new_event = npc.interact(other)
                     if isinstance(npc, Visitor) and min([distance(npc.pos, entrance) for entrance in self.entrances if
-                                                         entrance is not npc.start]) < 4:
+                                                         entrance is not npc.start]) < 5:
                         self.attempt_visitor_exit(npc)
             except KeyError:
                 print('Error getting position from details in MOVE event')
@@ -152,7 +153,11 @@ class Zoo:
             self.npcs.add(npc)
         elif event.type is Event.Type.VISITOR_EXIT:
             visitor = event.asset
-            self.npcs.remove(visitor)
+            try:
+                self.npcs.remove(visitor)
+            except KeyError:
+                # weird stuff
+                pass
             x, y = visitor.pos
             self.map[x][y] = ' '
             add_name(visitor.name)

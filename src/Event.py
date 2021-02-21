@@ -8,7 +8,8 @@ class Type(Enum):
     COMMAND = 3
     MOVE_PLAYER = 4
     VISITOR_EXIT = 5
-    BALANCE_CHANGE = 6
+    ADD_TO_INVENTORY = 6
+    REMOVE_FROM_INVENTORY = 7
 
 
 class AffecteesType(Enum):
