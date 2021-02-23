@@ -1,9 +1,9 @@
 # Project exclude paths
 /venv/
 .idea/
-/build/
-/dist/
-/build_resources/
-/setup.py
 /.eggs/
+/build/
+/build_resources/
+/dist/
+/setup.py
 /packages/

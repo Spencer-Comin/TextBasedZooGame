@@ -6,7 +6,7 @@ from Utilities import FPS
 
 class GameFrame(wx.Frame):
     def __init__(self, game):
-        super(GameFrame, self).__init__(None, title='Zoo', size=(765, 800))
+        super(GameFrame, self).__init__(None, title='Zoo', size=(565, 600))
         self.printer = Printer(self)
 
         self.game = game
@@ -22,6 +22,12 @@ class GameFrame(wx.Frame):
         box.Add(self.printer, 15, flag=wx.ALL, border=5)
         box.Add(self.notificationsWindow, 3, flag=wx.ALL | wx.EXPAND, border=5)
         box.Add(self.inputHandler, -1, flag=wx.ALL | wx.EXPAND, border=5)
+
+        # gimme window size
+        # def print_size(e):
+        #     print(f'height: {e.Size.Height} width: {e.Size.Width}')
+        #
+        # self.Bind(wx.EVT_SIZE, print_size)
 
         self.update_loop()
 
