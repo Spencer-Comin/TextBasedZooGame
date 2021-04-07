@@ -1,5 +1,5 @@
 import Event
-from NPC import NPCLookup, Animal, Visitor
+from NPC import NPCLookup, Animal, Visitor, NPC
 from Utilities import neighbours, add_name, distance
 import random
 
@@ -11,9 +11,11 @@ class Zoo:
     maxNPCs = 80
 
     def __init__(self, filename, player_char, emit):
+        NPC.is_open = self.is_open
         self.npcs = set()
         self.emit = emit
         self.walls = set()
+        NPC.walls = self.walls
         self.gates = set()
         self.openGates = set()
         self.entrances = set()
@@ -22,6 +24,9 @@ class Zoo:
         self.playerChar = player_char
         self.map = self.build_from_file(filename)
         self.analyze_map()
+
+    def is_open(self, gate):
+        return gate in self.openGates
 
     @property
     def npc_positions(self):
@@ -132,6 +137,8 @@ class Zoo:
                     if isinstance(npc, Visitor) and min([distance(npc.pos, entrance) for entrance in self.entrances if
                                                          entrance is not npc.start]) < 5:
                         self.attempt_visitor_exit(npc)
+                elif new_position in self.gates and npc in self.animals:
+                    npc.gate = new_position
             except KeyError:
                 print('Error getting position from details in MOVE event')
         elif event.type is Event.Type.MOVE_PLAYER:

@@ -8,6 +8,10 @@ class NPC:
     babyPrint = ' '
     adultPrint = ' '
     baby = bool(random.getrandbits(1))
+    is_open = None
+    emit = None
+    path = []
+    walls = set()
 
     def __init__(self, pos, emit, name=''):
         if not name:
@@ -18,8 +22,11 @@ class NPC:
 
     def attempt_move(self):
         if random.random() < self.speed:
-            x, y = self.pos
-            new_pos = random.choice([(x + 1, y), (x, y + 1), (x - 1, y), (x, y - 1)])
+            if not self.path:
+                x, y = self.pos
+                new_pos = random.choice([(x + 1, y), (x, y + 1), (x - 1, y), (x, y - 1)])
+            else:
+                new_pos = self.path.pop(0)
 
             self.emit(Event.Event(Event.Type.MOVE, self,
                                   affects=(Event.AffecteesType.ZOO,),
@@ -64,12 +71,13 @@ class Animal(NPC):
     maxAge = 700 * FPS
     baby = True
     babyProbability = 0.002
+    gate = None
 
     def __init__(self, position, emit, name=''):
         if not name:
             name = get_name(animal=True)
         super().__init__(position, emit, name)
-        self.age = 0
+        self.age = random.randint(0, 60) * FPS
         self.maxHunger += random.randint(0, 120) * FPS
         self.maxAge += random.randint(0, 180) * FPS
 
@@ -102,6 +110,37 @@ class Animal(NPC):
                                   affects=(Event.AffecteesType.ZOO, Event.AffecteesType.PLAYER),
                                   details={
                                       'notification': f'{self.title} and {other.title} have given birth to {name}'}))
+
+    @staticmethod
+    def three_way_compare(a, b):
+        if a > b:
+            return 1
+        elif a < b:
+            return -1
+        else:
+            return 0
+
+    def attempt_move(self):
+        if self.pos == self.gate:
+            self.gate = None
+        if self.path and not self.is_open(self.gate):
+            self.path = []
+        elif not self.path and self.is_open(self.gate):
+            # this pathfinding is boring, maybe implement djikstra or A* later
+            x, y = self.pos
+            end_x, end_y = self.gate
+            dx = -self.three_way_compare(x, end_x)
+            dy = -self.three_way_compare(y, end_y)
+            while x != end_x or y != end_y:
+                if x == end_x:
+                    dx = 0
+                if y == end_y:
+                    dy = 0
+                x += dx
+                y += dy
+                self.path.append((x, y))
+
+        super().attempt_move()
 
 
 class Predator(Animal):
